@@ -23,6 +23,8 @@ import {
   login,
   loginCliente,
   cadastrarCliente,
+  recuperarSenha,
+  redefinirSenha,
   logout,
   perfil,
   estatisticas,
@@ -211,11 +213,18 @@ export default function App() {
   useEffect(() => {
     if (!autenticado || typeof window === 'undefined') return undefined;
 
-    const apiBase = String(import.meta.env.VITE_API_URL || '').replace(
-      /\/$/,
-      ''
-    );
-    const wsBase = String(import.meta.env.VITE_WS_URL || '').replace(/\/$/, '');
+    const apiBase = String(
+      import.meta.env.VITE_API_URL ||
+        (window.location.hostname.endsWith('.webcontainer.io')
+          ? 'https://pantanal-pets.onrender.com'
+          : '')
+    ).replace(/\/$/, '');
+    const wsBase = String(
+      import.meta.env.VITE_WS_URL ||
+        (window.location.hostname.endsWith('.webcontainer.io')
+          ? 'wss://pantanal-pets.onrender.com'
+          : '')
+    ).replace(/\/$/, '');
     const origem =
       wsBase ||
       apiBase.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:') ||
@@ -761,6 +770,8 @@ export default function App() {
         onLogin={entrar}
         onLoginCliente={entrarComoCliente}
         onCadastroCliente={cadastrarComoCliente}
+        onRecuperarSenha={recuperarSenha}
+        onRedefinirSenha={redefinirSenha}
         onLogout={sair}
         onAcessarAdmin={acessarAdmin}
       />

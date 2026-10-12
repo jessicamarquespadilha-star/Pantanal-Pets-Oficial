@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createHash, randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { hashSenhaCliente, verificarHashSenha } from './security/password.js';
 import initSqlJs from 'sql.js';
@@ -71,6 +72,52 @@ export async function autenticarCliente({ email, senha }) {
   return { id: Number(cliente.id), nome: cliente.nome, email: cliente.email };
 }
 
+
+/** Cria token de redefinição com validade curta. O token puro só é enviado ao e-mail. */
+export async function criarTokenRedefinicaoSenha(email) {
+  if (!db) throw new Error('Banco de dados ainda não inicializado.');
+  const emailLimpo = String(email || '').trim().toLowerCase();
+  if (!EMAIL_CLIENTE_RE.test(emailLimpo)) return null;
+
+  const stmt = getDb().prepare('SELECT id FROM clientes WHERE email = ? COLLATE NOCASE');
+  let clienteId = null;
+  try { stmt.bind([emailLimpo]); if (stmt.step()) clienteId = Number(stmt.getAsObject().id); }
+  finally { stmt.free(); }
+  if (!clienteId) return null;
+
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const agora = new Date();
+  const expira = new Date(agora.getTime() + 30 * 60 * 1000).toISOString();
+  getDb().run('UPDATE redefinicoes_senha SET usado = 1 WHERE cliente_id = ? AND usado = 0', [clienteId]);
+  getDb().run('INSERT INTO redefinicoes_senha (cliente_id, token_hash, expira_em, usado, criado_em) VALUES (?, ?, ?, 0, ?)', [clienteId, tokenHash, expira, agora.toISOString()]);
+  await gravarSnapshot(db.export(), dbFile);
+  return { token, email: emailLimpo };
+}
+
+export async function atualizarSenhaComToken(token, novaSenha) {
+  if (!db) throw new Error('Banco de dados ainda não inicializado.');
+  const tokenTexto = String(token || '').trim();
+  const senhaTexto = String(novaSenha || '');
+  if (!/^[a-f0-9]{64}$/i.test(tokenTexto)) throw Object.assign(new Error('Link de redefinição inválido ou expirado.'), { codigo: 'TOKEN_INVALIDO' });
+  if (senhaTexto.length < 8 || senhaTexto.length > 128) throw Object.assign(new Error('A senha deve ter entre 8 e 128 caracteres.'), { codigo: 'DADOS_INVALIDOS' });
+
+  const tokenHash = createHash('sha256').update(tokenTexto).digest('hex');
+  const stmt = getDb().prepare('SELECT id, cliente_id, expira_em FROM redefinicoes_senha WHERE token_hash = ? AND usado = 0');
+  let registro = null;
+  try { stmt.bind([tokenHash]); if (stmt.step()) registro = stmt.getAsObject(); }
+  finally { stmt.free(); }
+  if (!registro || new Date(registro.expira_em).getTime() <= Date.now()) {
+    throw Object.assign(new Error('Link de redefinição inválido ou expirado. Solicite um novo.'), { codigo: 'TOKEN_INVALIDO' });
+  }
+
+  const senhaHash = await hashSenhaCliente(senhaTexto);
+  getDb().run('UPDATE clientes SET senha_hash = ? WHERE id = ?', [senhaHash, Number(registro.cliente_id)]);
+  getDb().run('UPDATE redefinicoes_senha SET usado = 1 WHERE id = ?', [Number(registro.id)]);
+  await gravarSnapshot(db.export(), dbFile);
+  return true;
+}
+
 export function criarDAO() {
   return new SQLiteDAO(getDb, {
     filePath: dbFile,
@@ -108,6 +155,7 @@ function colunasDe(tabela) {
 
 function criarTabelas() {
   getDb().run(`CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE COLLATE NOCASE, senha_hash TEXT NOT NULL, criado_em TEXT NOT NULL)`);
+  getDb().run(`CREATE TABLE IF NOT EXISTS redefinicoes_senha (id INTEGER PRIMARY KEY AUTOINCREMENT, cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expira_em TEXT NOT NULL, usado INTEGER NOT NULL DEFAULT 0, criado_em TEXT NOT NULL)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS categorias (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS produtos (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, categoria_id INTEGER NOT NULL REFERENCES categorias(id), preco REAL NOT NULL CHECK(preco >= 0), descricao TEXT, validade TEXT, unidade_venda TEXT, imagem TEXT, criado_em TEXT NOT NULL, atualizado_em TEXT NOT NULL)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, produto_id INTEGER, produto_nome TEXT NOT NULL, detalhes TEXT, criado_em TEXT NOT NULL)`);

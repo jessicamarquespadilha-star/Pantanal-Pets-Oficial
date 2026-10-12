@@ -1,6 +1,13 @@
-const API_BASE_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+// No StackBlitz, usa o backend oficial do Render para não criar um segundo banco local.
+// VITE_API_URL continua permitindo sobrescrever o endereço em outros ambientes.
+const API_BASE_URL = String(
+  import.meta.env.VITE_API_URL ||
+    (typeof window !== 'undefined' && window.location.hostname.endsWith('.webcontainer.io')
+      ? 'https://pantanal-pets.onrender.com'
+      : '')
+).replace(/\/$/, '')
 
-const ROTAS_SEM_EXPIRACAO = new Set(['/login', '/login-cliente', '/cadastro-cliente', '/perfil'])
+const ROTAS_SEM_EXPIRACAO = new Set(['/login', '/login-cliente', '/cadastro-cliente', '/perfil', '/recuperar-senha', '/redefinir-senha'])
 
 async function tentarUmaVez(path, options) {
   const { body, headers = {}, ...rest } = options
@@ -74,6 +81,8 @@ async function request(path, options = {}) {
 export const login = (accessToken) => request('/login', { method: 'POST', body: { access_token: accessToken } })
 export const loginCliente = (credenciais) => request('/login-cliente', { method: 'POST', body: credenciais })
 export const cadastrarCliente = (dados) => request('/cadastro-cliente', { method: 'POST', body: dados })
+export const recuperarSenha = (email) => request('/recuperar-senha', { method: 'POST', body: { email } })
+export const redefinirSenha = (token, senha) => request('/redefinir-senha', { method: 'POST', body: { token, senha } })
 export const perfil = () => request('/perfil')
 export const logout = () => request('/logout', { method: 'POST' })
 export const config = () => request('/config')

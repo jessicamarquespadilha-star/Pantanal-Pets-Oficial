@@ -17,6 +17,8 @@ services:
         value: '556792460374'
       - key: CIDADES_ATENDIDAS
         value: 'Corumbá,Ladário'
+      - key: FRONTEND_URL
+        value: 'https://stackblitzstarterspfgtbrt4-jk5e--3000--2ed8f36d.local-credentialless.webcontainer.io'
     disk:
       name: loja-pet-data
       mountPath: /opt/render/project/src/data

@@ -9,11 +9,15 @@ export default function Login({
   onLogin,
   onLoginCliente,
   onCadastroCliente,
+  onRecuperarSenha,
+  onRedefinirSenha,
   onLogout,
   onAcessarAdmin,
 }) {
   const [modo, setModo] = useState('cliente');
-  const [modoCliente, setModoCliente] = useState('entrar');
+  const tokenInicial = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redefinirSenha') : null;
+  const [modoCliente, setModoCliente] = useState(tokenInicial ? 'redefinir' : 'entrar');
+  const [mensagemReset, setMensagemReset] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [emailCliente, setEmailCliente] = useState('');
   const [senhaCliente, setSenhaCliente] = useState('');
@@ -42,10 +46,20 @@ export default function Login({
   async function entrarComoCliente(e) {
     e.preventDefault();
     setErro('');
+    setMensagemReset('');
     setEnviando(true);
     try {
       if (modoCliente === 'cadastro') {
         await onCadastroCliente({ nome: nomeCliente, email: emailCliente, senha: senhaCliente });
+      } else if (modoCliente === 'recuperar') {
+        await onRecuperarSenha(emailCliente);
+        setMensagemReset('Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
+      } else if (modoCliente === 'redefinir') {
+        const token = new URLSearchParams(window.location.search).get('redefinirSenha');
+        await onRedefinirSenha(token, senhaCliente);
+        setMensagemReset('Senha redefinida com sucesso. Agora entre com a nova senha.');
+        setModoCliente('entrar');
+        window.history.replaceState({}, '', window.location.pathname);
       } else {
         await onLoginCliente({ email: emailCliente, senha: senhaCliente });
       }
@@ -141,9 +155,9 @@ export default function Login({
         <span className="login-opcao-icone login-opcao-icone-imagem">
           <IconeTransparente src={ICONE_URLS.loginCliente} alt="Ícone de cliente" />
         </span>
-        <span className="login-opcao-titulo">{modoCliente === 'cadastro' ? 'Criar conta de cliente' : 'Acessar como cliente'}</span>
+        <span className="login-opcao-titulo">{modoCliente === 'cadastro' ? 'Criar conta de cliente' : modoCliente === 'recuperar' ? 'Recuperar senha' : modoCliente === 'redefinir' ? 'Criar nova senha' : 'Acessar como cliente'}</span>
         <span className="login-opcao-desc">
-          Entre na sua conta para procurar produtos, montar seu carrinho e usar os cupons disponíveis.
+          {modoCliente === 'recuperar' ? 'Informe o e-mail cadastrado para receber um link de redefinição.' : modoCliente === 'redefinir' ? 'Escolha uma nova senha para sua conta.' : 'Entre na sua conta para procurar produtos, montar seu carrinho e usar os cupons disponíveis.'}
         </span>
         <form className="login-form" onSubmit={entrarComoCliente}>
           {modoCliente === 'cadastro' && (
@@ -160,7 +174,7 @@ export default function Login({
               disabled={enviando}
             />
           )}
-          <input
+          {modoCliente !== 'redefinir' && <input
             type="email"
             placeholder="E-mail"
             aria-label="E-mail"
@@ -170,35 +184,38 @@ export default function Login({
             maxLength={254}
             required
             disabled={enviando}
-          />
-          <input
+          />}
+          {modoCliente !== 'recuperar' && <input
             type="password"
             placeholder={modoCliente === 'cadastro' ? 'Crie uma senha (mínimo 8 caracteres)' : 'Senha'}
             aria-label="Senha do cliente"
             value={senhaCliente}
             onChange={(e) => setSenhaCliente(e.target.value)}
             autoComplete={modoCliente === 'cadastro' ? 'new-password' : 'current-password'}
-            minLength={modoCliente === 'cadastro' ? 8 : 1}
+            minLength={modoCliente === 'cadastro' || modoCliente === 'redefinir' ? 8 : 1}
             maxLength={128}
             required
             disabled={enviando}
-          />
+          />}
           <button type="submit" className="login-cliente-principal" disabled={enviando}>
-            {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : 'Entrar como cliente'}
+            {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : modoCliente === 'recuperar' ? 'Enviar link de redefinição' : modoCliente === 'redefinir' ? 'Salvar nova senha' : 'Entrar como cliente'}
           </button>
         </form>
-        <button
+        {modoCliente === 'entrar' && <button type="button" className="link-admin" onClick={() => { setModoCliente('recuperar'); setErro(''); setMensagemReset(''); }} disabled={enviando}>Esqueci minha senha</button>}
+        {(modoCliente === 'entrar' || modoCliente === 'cadastro') && <button
           type="button"
           className="link-admin"
-          onClick={() => { setModoCliente(modoCliente === 'cadastro' ? 'entrar' : 'cadastro'); setErro(''); }}
+          onClick={() => { setModoCliente(modoCliente === 'cadastro' ? 'entrar' : 'cadastro'); setErro(''); setMensagemReset(''); }}
           disabled={enviando}
         >
           {modoCliente === 'cadastro' ? 'Já tenho uma conta — entrar' : 'Ainda não tenho conta — cadastrar'}
-        </button>
+        </button>}
+        {(modoCliente === 'recuperar' || modoCliente === 'redefinir') && <button type="button" className="link-admin" onClick={() => { setModoCliente('entrar'); setErro(''); setMensagemReset(''); window.history.replaceState({}, '', window.location.pathname); }} disabled={enviando}>Voltar para entrar</button>}
         <button type="button" className="link-admin" onClick={abrirAdmin} disabled={enviando}>
           Ou acessar como administrador
         </button>
       </div>
+      {mensagemReset && <p className="sucesso" role="status">{mensagemReset}</p>}
       {erro && <p className="erro" role="alert">{erro}</p>}
     </section>
   );

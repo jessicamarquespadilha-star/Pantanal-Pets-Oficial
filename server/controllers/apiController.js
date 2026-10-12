@@ -1,5 +1,5 @@
 import { validarProduto, capitalizar, paginaValida, porPaginaValido, validarCupom } from '../util.js';
-import { criarDAO, modoArmazenamento, registrarCliente, autenticarCliente } from '../database.js';
+import { criarDAO, modoArmazenamento, registrarCliente, autenticarCliente, criarTokenRedefinicaoSenha, atualizarSenhaComToken } from '../database.js';
 import { SELECT_PRODUTO, produtoDaLinha } from '../models/produtoModel.js';
 import { cupomDaLinha as normalizarCupom } from '../models/cupomModel.js';
 import { motivoIndisponivel } from '../agendamentoRegras.js';
@@ -81,6 +81,66 @@ app.post('/api/login-cliente', async (req, res, next) => {
       return ok(res, { tipo: 'cliente', cliente }, 'Login de cliente realizado com sucesso.');
     });
   } catch (error) { return next(error); }
+});
+
+
+const handlerRecuperarSenha = async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email || email.length > 254) return falha(res, 400, 'DADOS_INVALIDOS', 'Informe um e-mail válido.');
+
+    // A chave e o remetente são configurados no ambiente do Render, nunca no código.
+    const apiKey = process.env.RESEND_API_KEY;
+    const remetente = process.env.EMAIL_FROM;
+    if (!apiKey || !remetente) {
+      return falha(res, 503, 'EMAIL_NAO_CONFIGURADO', 'A redefinição de senha ainda não está configurada no servidor. Configure RESEND_API_KEY e EMAIL_FROM no Render.');
+    }
+
+    const dados = await criarTokenRedefinicaoSenha(email);
+    // Resposta idêntica para contas existentes e inexistentes.
+    if (dados) {
+      const base = String(process.env.FRONTEND_URL || req.get('origin') || '').replace(/\/$/, '');
+      if (!base) return falha(res, 503, 'FRONTEND_URL_AUSENTE', 'Configure FRONTEND_URL no Render para enviar o link de redefinição.');
+      const link = `${base}/?redefinirSenha=${encodeURIComponent(dados.token)}`;
+      const envio = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: remetente,
+          to: [dados.email],
+          subject: 'Redefinição de senha — Pantanal Pets',
+          html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto"><h2>Redefina sua senha</h2><p>Recebemos uma solicitação para redefinir a senha da sua conta Pantanal Pets.</p><p>O link é válido por 30 minutos e pode ser usado uma única vez.</p><p><a href="${link}" style="display:inline-block;padding:12px 18px;background:#2f6b45;color:white;text-decoration:none;border-radius:6px">Criar nova senha</a></p><p>Se você não solicitou a alteração, ignore este e-mail.</p></div>`,
+        }),
+      });
+      if (!envio.ok) {
+        console.error('Falha ao enviar e-mail de redefinição:', envio.status);
+        return falha(res, 502, 'FALHA_ENVIO_EMAIL', 'Não foi possível enviar o e-mail de redefinição. Tente novamente mais tarde.');
+      }
+    }
+    return ok(res, {}, 'Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
+  } catch (error) { return next(error); }
+};
+
+const handlerRedefinirSenha = async (req, res, next) => {
+  try {
+    await atualizarSenhaComToken(req.body?.token, req.body?.senha);
+    return ok(res, {}, 'Senha redefinida com sucesso. Entre com a nova senha.');
+  } catch (error) {
+    if (error.codigo === 'DADOS_INVALIDOS' || error.codigo === 'TOKEN_INVALIDO') {
+      return falha(res, error.codigo === 'DADOS_INVALIDOS' ? 400 : 400, error.codigo, error.message);
+    }
+    return next(error);
+  }
+};
+
+// Compatibilidade com as duas versões de nomes de rota que já circularam no frontend.
+app.post('/api/recuperar-senha', handlerRecuperarSenha);
+app.post('/api/cliente/solicitar-redefinicao-senha', handlerRecuperarSenha);
+app.post('/api/redefinir-senha', handlerRedefinirSenha);
+app.post('/api/cliente/redefinir-senha', (req, res, next) => {
+  // A versão antiga envia novaSenha e email; a atual envia senha e token.
+  req.body = { ...(req.body || {}), senha: req.body?.senha ?? req.body?.novaSenha };
+  return handlerRedefinirSenha(req, res, next);
 });
 
 app.get('/api/perfil', exigeLogin, (req, res) => {
