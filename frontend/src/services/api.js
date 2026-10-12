@@ -1,4 +1,6 @@
-const API_BASE_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+const API_BASE_URL = String(
+  import.meta.env.VITE_API_URL || 'https://pantanal-pets.onrender.com'
+).replace(/\/$/, '')
 
 const ROTAS_SEM_EXPIRACAO = new Set(['/login', '/login-cliente', '/cadastro-cliente', '/perfil'])
 
