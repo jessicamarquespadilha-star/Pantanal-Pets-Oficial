@@ -1,0 +1,18 @@
+# Dependências
+node_modules/
+
+# Build de produção do front-end
+frontend/dist/
+
+# Variáveis de ambiente
+.env
+configuracao.env
+
+# O banco SQLite faz parte do projeto e deve ser preservado na entrega.
+# Arquivos temporários de gravação continuam ignorados.
+data/*.sqlite.tmp
+data/*.sqlite.*.tmp
+
+# Logs
+npm-debug.log*
+*.log
