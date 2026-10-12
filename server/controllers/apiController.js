@@ -84,7 +84,7 @@ app.post('/api/login-cliente', async (req, res, next) => {
 });
 
 
-const handlerRecuperarSenha = async (req, res, next) => {
+app.post('/api/recuperar-senha', async (req, res, next) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email || email.length > 254) return falha(res, 400, 'DADOS_INVALIDOS', 'Informe um e-mail válido.');
@@ -119,9 +119,9 @@ const handlerRecuperarSenha = async (req, res, next) => {
     }
     return ok(res, {}, 'Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
   } catch (error) { return next(error); }
-};
+});
 
-const handlerRedefinirSenha = async (req, res, next) => {
+app.post('/api/redefinir-senha', async (req, res, next) => {
   try {
     await atualizarSenhaComToken(req.body?.token, req.body?.senha);
     return ok(res, {}, 'Senha redefinida com sucesso. Entre com a nova senha.');
@@ -131,16 +131,6 @@ const handlerRedefinirSenha = async (req, res, next) => {
     }
     return next(error);
   }
-};
-
-// Compatibilidade com as duas versões de nomes de rota que já circularam no frontend.
-app.post('/api/recuperar-senha', handlerRecuperarSenha);
-app.post('/api/cliente/solicitar-redefinicao-senha', handlerRecuperarSenha);
-app.post('/api/redefinir-senha', handlerRedefinirSenha);
-app.post('/api/cliente/redefinir-senha', (req, res, next) => {
-  // A versão antiga envia novaSenha e email; a atual envia senha e token.
-  req.body = { ...(req.body || {}), senha: req.body?.senha ?? req.body?.novaSenha };
-  return handlerRedefinirSenha(req, res, next);
 });
 
 app.get('/api/perfil', exigeLogin, (req, res) => {
