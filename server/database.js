@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { hashSenhaCliente, verificarHashSenha } from './security/password.js';
+import { createHash, randomBytes } from 'node:crypto';
 import initSqlJs from 'sql.js';
 import { capitalizar } from './util.js';
 import { SQLiteDAO } from './dao/sqliteDAO.js';
@@ -71,6 +72,57 @@ export async function autenticarCliente({ email, senha }) {
   return { id: Number(cliente.id), nome: cliente.nome, email: cliente.email };
 }
 
+/**
+ * Cria token de recuperação de uso único. O token puro só é devolvido
+ * uma vez para que a rota possa enviá-lo por e-mail; no banco fica apenas o hash.
+ */
+export async function criarRecuperacaoSenha(email) {
+  if (!db) throw new Error('Banco de dados ainda não inicializado.');
+  const emailLimpo = String(email || '').trim().toLowerCase();
+  if (!EMAIL_CLIENTE_RE.test(emailLimpo) || emailLimpo.length > 254) return null;
+
+  const stmt = getDb().prepare('SELECT id, nome, email FROM clientes WHERE email = ? COLLATE NOCASE');
+  let cliente = null;
+  try { stmt.bind([emailLimpo]); if (stmt.step()) cliente = stmt.getAsObject(); } finally { stmt.free(); }
+  if (!cliente) return null;
+
+  const token = randomBytes(32).toString('hex');
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const agora = new Date();
+  const expira = new Date(agora.getTime() + 30 * 60 * 1000).toISOString();
+
+  getDb().run('DELETE FROM recuperacao_senha WHERE cliente_id = ? AND usado_em IS NULL', [Number(cliente.id)]);
+  getDb().run(
+    'INSERT INTO recuperacao_senha (cliente_id, token_hash, expira_em, usado_em, criado_em) VALUES (?, ?, ?, NULL, ?)',
+    [Number(cliente.id), tokenHash, expira, agora.toISOString()]
+  );
+  await salvarArquivoBanco();
+  return { token, cliente: { id: Number(cliente.id), nome: cliente.nome, email: cliente.email } };
+}
+
+/** Troca a senha somente se o token existir, não tiver sido usado e não estiver expirado. */
+export async function redefinirSenhaCliente(tokenInformado, senhaInformada) {
+  if (!db) throw new Error('Banco de dados ainda não inicializado.');
+  const token = String(tokenInformado || '').trim();
+  const senha = String(senhaInformada || '');
+  if (!/^[a-f0-9]{64}$/i.test(token)) throw Object.assign(new Error('O link de recuperação é inválido ou expirou.'), { codigo: 'TOKEN_RECUPERACAO_INVALIDO' });
+  if (senha.length < 8 || senha.length > 128) throw Object.assign(new Error('A senha deve ter entre 8 e 128 caracteres.'), { codigo: 'SENHA_INVALIDA' });
+
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  const stmt = getDb().prepare('SELECT id, cliente_id FROM recuperacao_senha WHERE token_hash = ? AND usado_em IS NULL AND expira_em > ?');
+  let registro = null;
+  try { stmt.bind([tokenHash, new Date().toISOString()]); if (stmt.step()) registro = stmt.getAsObject(); } finally { stmt.free(); }
+  if (!registro) throw Object.assign(new Error('O link de recuperação é inválido ou expirou.'), { codigo: 'TOKEN_RECUPERACAO_INVALIDO' });
+
+  const hash = await hashSenhaCliente(senha);
+  const agora = new Date().toISOString();
+  getDb().run('UPDATE clientes SET senha_hash = ? WHERE id = ?', [hash, Number(registro.cliente_id)]);
+  getDb().run('UPDATE recuperacao_senha SET usado_em = ? WHERE id = ?', [agora, Number(registro.id)]);
+  getDb().run('UPDATE recuperacao_senha SET usado_em = ? WHERE cliente_id = ? AND usado_em IS NULL', [agora, Number(registro.cliente_id)]);
+  await salvarArquivoBanco();
+  return true;
+}
+
 export function criarDAO() {
   return new SQLiteDAO(getDb, {
     filePath: dbFile,
@@ -108,6 +160,7 @@ function colunasDe(tabela) {
 
 function criarTabelas() {
   getDb().run(`CREATE TABLE IF NOT EXISTS clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, email TEXT NOT NULL UNIQUE COLLATE NOCASE, senha_hash TEXT NOT NULL, criado_em TEXT NOT NULL)`);
+  getDb().run(`CREATE TABLE IF NOT EXISTS recuperacao_senha (id INTEGER PRIMARY KEY AUTOINCREMENT, cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE, token_hash TEXT NOT NULL UNIQUE, expira_em TEXT NOT NULL, usado_em TEXT, criado_em TEXT NOT NULL)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS categorias (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL UNIQUE)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS produtos (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL, categoria_id INTEGER NOT NULL REFERENCES categorias(id), preco REAL NOT NULL CHECK(preco >= 0), descricao TEXT, validade TEXT, unidade_venda TEXT, imagem TEXT, criado_em TEXT NOT NULL, atualizado_em TEXT NOT NULL)`);
   getDb().run(`CREATE TABLE IF NOT EXISTS historico (id INTEGER PRIMARY KEY AUTOINCREMENT, tipo TEXT NOT NULL, produto_id INTEGER, produto_nome TEXT NOT NULL, detalhes TEXT, criado_em TEXT NOT NULL)`);
