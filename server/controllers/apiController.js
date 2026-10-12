@@ -1,5 +1,5 @@
 import { validarProduto, capitalizar, paginaValida, porPaginaValido, validarCupom } from '../util.js';
-import { criarDAO, modoArmazenamento, registrarCliente, autenticarCliente } from '../database.js';
+import { criarDAO, modoArmazenamento, registrarCliente, autenticarCliente, criarRecuperacaoSenha, redefinirSenhaCliente } from '../database.js';
 import { SELECT_PRODUTO, produtoDaLinha } from '../models/produtoModel.js';
 import { cupomDaLinha as normalizarCupom } from '../models/cupomModel.js';
 import { motivoIndisponivel } from '../agendamentoRegras.js';
@@ -63,6 +63,61 @@ app.post('/api/cadastro-cliente', async (req, res, next) => {
   } catch (error) {
     if (error.codigo === 'DADOS_INVALIDOS') return falha(res, 400, error.codigo, error.message);
     if (error.codigo === 'EMAIL_EM_USO') return falha(res, 409, error.codigo, error.message);
+    return next(error);
+  }
+});
+
+app.post('/api/recuperar-senha', async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
+      return falha(res, 400, 'EMAIL_INVALIDO', 'Informe um e-mail válido.');
+    }
+
+    const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+    const remetente = String(process.env.EMAIL_FROM || '').trim();
+    const appUrl = String(process.env.APP_URL || '').trim().replace(/\/$/, '');
+    if (!apiKey || !remetente || !appUrl) {
+      console.error('Recuperação de senha não configurada: defina RESEND_API_KEY, EMAIL_FROM e APP_URL no Render.');
+      return falha(res, 503, 'RECUPERACAO_INDISPONIVEL', 'A recuperação por e-mail ainda não está configurada. Tente novamente mais tarde.');
+    }
+
+    const recuperacao = await criarRecuperacaoSenha(email);
+    // Resposta genérica para não revelar se um e-mail está cadastrado.
+    if (recuperacao) {
+      const link = `${appUrl}/?token=${encodeURIComponent(recuperacao.token)}`;
+      const nome = String(recuperacao.cliente.nome || 'cliente')
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const respostaEmail = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: remetente,
+          to: [recuperacao.cliente.email],
+          subject: 'Redefinição de senha — Pantanal Pets',
+          text: `Olá, ${nome}. Para criar uma nova senha, acesse: ${link}\n\nO link expira em 30 minutos e só pode ser usado uma vez. Se você não solicitou a redefinição, ignore esta mensagem.`,
+          html: `<p>Olá, ${nome}.</p><p>Recebemos uma solicitação para redefinir a senha da sua conta Pantanal Pets.</p><p><a href="${link}">Criar nova senha</a></p><p>O link expira em 30 minutos e só pode ser usado uma vez. Se você não solicitou a redefinição, ignore esta mensagem.</p>`,
+        }),
+      });
+      if (!respostaEmail.ok) {
+        const detalhe = await respostaEmail.text().catch(() => '');
+        console.error('Falha ao enviar e-mail de recuperação:', respostaEmail.status, detalhe.slice(0, 500));
+        return falha(res, 502, 'FALHA_ENVIO_EMAIL', 'Não foi possível enviar o e-mail de recuperação. Verifique a configuração do serviço de e-mail.');
+      }
+    }
+    return ok(res, null, 'Se houver uma conta com esse e-mail, enviaremos um link de recuperação.');
+  } catch (error) { return next(error); }
+});
+
+app.post('/api/redefinir-senha', async (req, res, next) => {
+  try {
+    await redefinirSenhaCliente(req.body?.token, req.body?.senha);
+    return ok(res, null, 'Senha redefinida com sucesso. Você já pode entrar com a nova senha.');
+  } catch (error) {
+    if (['TOKEN_RECUPERACAO_INVALIDO', 'SENHA_INVALIDA'].includes(error?.codigo)) {
+      return falha(res, 400, error.codigo, error.message);
+    }
     return next(error);
   }
 });
