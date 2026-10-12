@@ -287,8 +287,3 @@ export default function Login({
     </section>
   );
 }
-      </div>
-      {erro && <p className="erro" role="alert">{erro}</p>}
-    </section>
-  );
-}
