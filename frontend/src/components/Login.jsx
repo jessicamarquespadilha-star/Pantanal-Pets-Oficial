@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { recuperarSenha as solicitarRecuperacaoApi, redefinirSenha as redefinirSenhaApi } from '../services/api.js';
+import {  solicitarRecuperacaoSenha as solicitarRecuperacaoApi,  redefinirSenhaCliente as redefinirSenhaApi,} from "../services/api.js";
 import { ICONE_URLS } from '../lib/icones.js';
 import IconeTransparente from './IconeTransparente.jsx';
 
