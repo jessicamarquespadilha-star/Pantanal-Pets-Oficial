@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { recuperarSenha as solicitarRecuperacaoApi, redefinirSenha as redefinirSenhaApi } from '../services/api.js';
 import { ICONE_URLS } from '../lib/icones.js';
 import IconeTransparente from './IconeTransparente.jsx';
 
@@ -9,8 +10,8 @@ export default function Login({
   onLogin,
   onLoginCliente,
   onCadastroCliente,
-  onRecuperarSenha,
-  onRedefinirSenha,
+  onRecuperarSenha = solicitarRecuperacaoApi,
+  onRedefinirSenha = redefinirSenhaApi,
   onLogout,
   onAcessarAdmin,
 }) {
@@ -44,6 +45,10 @@ export default function Login({
     }
   }
 
+  function alternarVisibilidadeSenha() {
+    setMostrarSenhaCliente((visivel) => !visivel);
+  }
+
   async function entrarComoCliente(e) {
     e.preventDefault();
     setErro('');
@@ -56,8 +61,12 @@ export default function Login({
         await onRecuperarSenha(emailCliente);
         setMensagemReset('Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
       } else if (modoCliente === 'redefinir') {
-        const token = new URLSearchParams(window.location.search).get('redefinirSenha');
-        await onRedefinirSenha(token, senhaCliente);
+        const tokenReset = new URLSearchParams(window.location.search).get('redefinirSenha');
+        if (!tokenReset) {
+          throw new Error('O link de redefinição está incompleto. Solicite um novo e-mail de recuperação.');
+        }
+        const redefinir = typeof onRedefinirSenha === 'function' ? onRedefinirSenha : redefinirSenhaApi;
+        await redefinir(tokenReset, senhaCliente);
         setMensagemReset('Senha redefinida com sucesso. Agora entre com a nova senha.');
         setModoCliente('entrar');
         window.history.replaceState({}, '', window.location.pathname);
@@ -204,7 +213,7 @@ export default function Login({
                 <button
                   type="button"
                   className="login-senha-alternar"
-                  onClick={() => setMostrarSenhaCliente((visivel) => !visivel)}
+                  onClick={alternarVisibilidadeSenha}
                   aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'}
                   aria-pressed={mostrarSenhaCliente}
                   title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'}
@@ -244,7 +253,7 @@ export default function Login({
                   required
                   disabled={enviando}
                 />
-                <button type="button" className="login-senha-alternar" onClick={() => setMostrarSenhaCliente((visivel) => !visivel)} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
+                <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
                   {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
                 </button>
               </div>}
