@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { solicitarRecuperacaoSenha, redefinirSenhaCliente } from '../services/api.js';
 import { ICONE_URLS } from '../lib/icones.js';
 import IconeTransparente from './IconeTransparente.jsx';
 
@@ -10,17 +9,19 @@ export default function Login({
   onLogin,
   onLoginCliente,
   onCadastroCliente,
+  onRecuperarSenha,
+  onRedefinirSenha,
   onLogout,
   onAcessarAdmin,
 }) {
   const [modo, setModo] = useState('cliente');
-  const [modoCliente, setModoCliente] = useState(() => new URLSearchParams(window.location.search).get('token') ? 'redefinir' : 'entrar');
-  const [tokenRecuperacao, setTokenRecuperacao] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
-  const [confirmacaoSenha, setConfirmacaoSenha] = useState('');
-  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
+  const tokenInicial = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redefinirSenha') : null;
+  const [modoCliente, setModoCliente] = useState(tokenInicial ? 'redefinir' : 'entrar');
+  const [mensagemReset, setMensagemReset] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [emailCliente, setEmailCliente] = useState('');
   const [senhaCliente, setSenhaCliente] = useState('');
+  const [mostrarSenhaCliente, setMostrarSenhaCliente] = useState(false);
   const [token, setToken] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -46,27 +47,24 @@ export default function Login({
   async function entrarComoCliente(e) {
     e.preventDefault();
     setErro('');
-    setMensagemRecuperacao('');
+    setMensagemReset('');
     setEnviando(true);
     try {
-      if (modoCliente === 'recuperar') {
-        const resposta = await solicitarRecuperacaoSenha(emailCliente);
-        setMensagemRecuperacao(resposta.mensagem || 'Se houver uma conta com esse e-mail, enviaremos um link de recuperação.');
-      } else if (modoCliente === 'redefinir') {
-        if (senhaCliente !== confirmacaoSenha) throw new Error('As senhas não coincidem.');
-        const resposta = await redefinirSenhaCliente({ token: tokenRecuperacao, senha: senhaCliente });
-        setMensagemRecuperacao(resposta.mensagem || 'Senha redefinida com sucesso. Você já pode entrar.');
-        setModoCliente('entrar');
-        setSenhaCliente('');
-        setConfirmacaoSenha('');
-        setTokenRecuperacao('');
-        window.history.replaceState({}, '', window.location.pathname);
-      } else if (modoCliente === 'cadastro') {
+      if (modoCliente === 'cadastro') {
         await onCadastroCliente({ nome: nomeCliente, email: emailCliente, senha: senhaCliente });
+      } else if (modoCliente === 'recuperar') {
+        await onRecuperarSenha(emailCliente);
+        setMensagemReset('Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
+      } else if (modoCliente === 'redefinir') {
+        const token = new URLSearchParams(window.location.search).get('redefinirSenha');
+        await onRedefinirSenha(token, senhaCliente);
+        setMensagemReset('Senha redefinida com sucesso. Agora entre com a nova senha.');
+        setModoCliente('entrar');
+        window.history.replaceState({}, '', window.location.pathname);
       } else {
         await onLoginCliente({ email: emailCliente, senha: senhaCliente });
       }
-      if (modoCliente !== 'recuperar' && modoCliente !== 'redefinir') setSenhaCliente('');
+      setSenhaCliente('');
     } catch (erro) {
       setErro(erro.message);
     } finally {
@@ -76,7 +74,6 @@ export default function Login({
 
   async function abrirAdmin() {
     setErro('');
-    setMensagemRecuperacao('');
     setModo('admin');
     setToken('');
   }
@@ -159,83 +156,27 @@ export default function Login({
         <span className="login-opcao-icone login-opcao-icone-imagem">
           <IconeTransparente src={ICONE_URLS.loginCliente} alt="Ícone de cliente" />
         </span>
-        <span className="login-opcao-titulo">{modoCliente === 'cadastro' ? 'Criar conta de cliente' : 'Acessar como cliente'}</span>
+        <span className="login-opcao-titulo">{modoCliente === 'cadastro' ? 'Criar conta de cliente' : modoCliente === 'recuperar' ? 'Recuperar senha' : modoCliente === 'redefinir' ? 'Criar nova senha' : 'Acessar como cliente'}</span>
         <span className="login-opcao-desc">
-          Entre na sua conta para procurar produtos, montar seu carrinho e usar os cupons disponíveis.
+          {modoCliente === 'recuperar' ? 'Informe o e-mail cadastrado para receber um link de redefinição.' : modoCliente === 'redefinir' ? 'Escolha uma nova senha para sua conta.' : 'Entre na sua conta para procurar produtos, montar seu carrinho e usar os cupons disponíveis.'}
         </span>
-        {modoCliente === 'recuperar' ? (
-          <>
-            <p className="muted">Informe o e-mail da sua conta. Se ele estiver cadastrado, enviaremos um link para redefinir a senha.</p>
-            <form className="login-form" onSubmit={entrarComoCliente}>
-              <input
-                type="email"
-                placeholder="E-mail cadastrado"
-                aria-label="E-mail cadastrado"
-                value={emailCliente}
-                onChange={(e) => setEmailCliente(e.target.value)}
-                autoComplete="email"
-                maxLength={254}
-                required
-                disabled={enviando}
-              />
-              <button type="submit" className="login-cliente-principal" disabled={enviando}>
-                {enviando ? 'Enviando...' : 'Enviar link de recuperação'}
-              </button>
-            </form>
-            <button type="button" className="link-admin" onClick={() => { setModoCliente('entrar'); setErro(''); setMensagemRecuperacao(''); }} disabled={enviando}>
-              Voltar para entrar
-            </button>
-          </>
-        ) : modoCliente === 'redefinir' ? (
-          <>
-            <p className="muted">Escolha uma nova senha com pelo menos 8 caracteres.</p>
-            <form className="login-form" onSubmit={entrarComoCliente}>
-              <input
-                type="password"
-                placeholder="Nova senha"
-                aria-label="Nova senha"
-                value={senhaCliente}
-                onChange={(e) => setSenhaCliente(e.target.value)}
-                autoComplete="new-password"
-                minLength={8}
-                maxLength={128}
-                required
-                disabled={enviando}
-              />
-              <input
-                type="password"
-                placeholder="Confirme a nova senha"
-                aria-label="Confirme a nova senha"
-                value={confirmacaoSenha}
-                onChange={(e) => setConfirmacaoSenha(e.target.value)}
-                autoComplete="new-password"
-                minLength={8}
-                maxLength={128}
-                required
-                disabled={enviando}
-              />
-              <button type="submit" className="login-cliente-principal" disabled={enviando}>
-                {enviando ? 'Salvando...' : 'Redefinir senha'}
-              </button>
-            </form>
-          </>
-        ) : (
-          <>
-            <form className="login-form" onSubmit={entrarComoCliente}>
-              {modoCliente === 'cadastro' && (
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  aria-label="Nome completo"
-                  value={nomeCliente}
-                  onChange={(e) => setNomeCliente(e.target.value)}
-                  minLength={2}
-                  maxLength={100}
-                  autoComplete="name"
-                  required
-                  disabled={enviando}
-                />
-              )}
+        <form className={`login-form login-form-cliente modo-${modoCliente}`} onSubmit={entrarComoCliente}>
+          {modoCliente === 'cadastro' && (
+            <input
+              type="text"
+              placeholder="Nome completo"
+              aria-label="Nome completo"
+              value={nomeCliente}
+              onChange={(e) => setNomeCliente(e.target.value)}
+              minLength={2}
+              maxLength={100}
+              autoComplete="name"
+              required
+              disabled={enviando}
+            />
+          )}
+          {(modoCliente === 'entrar' || modoCliente === 'cadastro') ? (
+            <div className="login-cliente-campos-linha">
               <input
                 type="email"
                 placeholder="E-mail"
@@ -247,42 +188,87 @@ export default function Login({
                 required
                 disabled={enviando}
               />
-              <input
-                type="password"
-                placeholder={modoCliente === 'cadastro' ? 'Crie uma senha (mínimo 8 caracteres)' : 'Senha'}
-                aria-label="Senha do cliente"
-                value={senhaCliente}
-                onChange={(e) => setSenhaCliente(e.target.value)}
-                autoComplete={modoCliente === 'cadastro' ? 'new-password' : 'current-password'}
-                minLength={modoCliente === 'cadastro' ? 8 : 1}
-                maxLength={128}
+              <div className="login-senha-campo">
+                <input
+                  type={mostrarSenhaCliente ? 'text' : 'password'}
+                  placeholder={modoCliente === 'cadastro' ? 'Crie uma senha (mínimo 8 caracteres)' : 'Senha'}
+                  aria-label="Senha do cliente"
+                  value={senhaCliente}
+                  onChange={(e) => setSenhaCliente(e.target.value)}
+                  autoComplete={modoCliente === 'cadastro' ? 'new-password' : 'current-password'}
+                  minLength={modoCliente === 'cadastro' ? 8 : 1}
+                  maxLength={128}
+                  required
+                  disabled={enviando}
+                />
+                <button
+                  type="button"
+                  className="login-senha-alternar"
+                  onClick={() => setMostrarSenhaCliente((visivel) => !visivel)}
+                  aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'}
+                  aria-pressed={mostrarSenhaCliente}
+                  title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'}
+                  disabled={enviando}
+                >
+                  {mostrarSenhaCliente ? (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {modoCliente !== 'redefinir' && <input
+                type="email"
+                placeholder="E-mail"
+                aria-label="E-mail"
+                value={emailCliente}
+                onChange={(e) => setEmailCliente(e.target.value)}
+                autoComplete="email"
+                maxLength={254}
                 required
                 disabled={enviando}
-              />
-              <button type="submit" className="login-cliente-principal" disabled={enviando}>
-                {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : 'Entrar como cliente'}
-              </button>
-            </form>
-            {modoCliente === 'entrar' && (
-              <button type="button" className="link-admin" onClick={() => { setModoCliente('recuperar'); setErro(''); setMensagemRecuperacao(''); }} disabled={enviando}>
-                Esqueci minha senha
-              </button>
-            )}
-            <button
-              type="button"
-              className="link-admin"
-              onClick={() => { setModoCliente(modoCliente === 'cadastro' ? 'entrar' : 'cadastro'); setErro(''); setMensagemRecuperacao(''); }}
-              disabled={enviando}
-            >
-              {modoCliente === 'cadastro' ? 'Já tenho uma conta — entrar' : 'Ainda não tenho conta — cadastrar'}
+              />}
+              {modoCliente !== 'recuperar' && <div className="login-senha-campo">
+                <input
+                  type={mostrarSenhaCliente ? 'text' : 'password'}
+                  placeholder={modoCliente === 'redefinir' ? 'Nova senha (mínimo 8 caracteres)' : 'Senha'}
+                  aria-label={modoCliente === 'redefinir' ? 'Nova senha' : 'Senha do cliente'}
+                  value={senhaCliente}
+                  onChange={(e) => setSenhaCliente(e.target.value)}
+                  autoComplete={modoCliente === 'redefinir' ? 'new-password' : 'current-password'}
+                  minLength={modoCliente === 'redefinir' ? 8 : 1}
+                  maxLength={128}
+                  required
+                  disabled={enviando}
+                />
+                <button type="button" className="login-senha-alternar" onClick={() => setMostrarSenhaCliente((visivel) => !visivel)} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
+                  {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                </button>
+              </div>}
+            </>
+          )}
+          {modoCliente === 'entrar' ? (
+            <div className="login-cliente-botoes-linha">
+              <button type="submit" className="login-cliente-principal" disabled={enviando}>{enviando ? 'Aguarde...' : 'Entrar como cliente'}</button>
+              <button type="button" className="login-cliente-cadastrar" onClick={() => { setModoCliente('cadastro'); setErro(''); setMensagemReset(''); setMostrarSenhaCliente(false); }} disabled={enviando}>Cadastrar cliente</button>
+            </div>
+          ) : (
+            <button type="submit" className="login-cliente-principal" disabled={enviando}>
+              {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : modoCliente === 'recuperar' ? 'Enviar link de redefinição' : 'Salvar nova senha'}
             </button>
-            <button type="button" className="link-admin" onClick={abrirAdmin} disabled={enviando}>
-              Ou acessar como administrador
-            </button>
-          </>
-        )}
-        {mensagemRecuperacao && <p className="sucesso-inline" role="status">{mensagemRecuperacao}</p>}
+          )}
+        </form>
+        {modoCliente === 'entrar' && <button type="button" className="link-admin" onClick={() => { setModoCliente('recuperar'); setErro(''); setMensagemReset(''); }} disabled={enviando}>Esqueci minha senha</button>}
+        {modoCliente === 'cadastro' && <button type="button" className="link-admin" onClick={() => { setModoCliente('entrar'); setErro(''); setMensagemReset(''); }} disabled={enviando}>Já tenho uma conta — entrar</button>}
+        {(modoCliente === 'recuperar' || modoCliente === 'redefinir') && <button type="button" className="link-admin" onClick={() => { setModoCliente('entrar'); setErro(''); setMensagemReset(''); window.history.replaceState({}, '', window.location.pathname); }} disabled={enviando}>Voltar para entrar</button>}
+        <button type="button" className="link-admin" onClick={abrirAdmin} disabled={enviando}>
+          Ou acessar como administrador
+        </button>
       </div>
+      {mensagemReset && <p className="sucesso" role="status">{mensagemReset}</p>}
       {erro && <p className="erro" role="alert">{erro}</p>}
     </section>
   );
