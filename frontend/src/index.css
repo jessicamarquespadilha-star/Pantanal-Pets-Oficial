@@ -4405,6 +4405,7 @@ html[data-tema='escuro'] .modal-aviso-exclusao-conteudo {
 }
 .login-senha-alternar {
   position: absolute;
+  z-index: 2;
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
@@ -4418,6 +4419,11 @@ html[data-tema='escuro'] .modal-aviso-exclusao-conteudo {
   background: transparent;
   color: var(--ink-muted);
   cursor: pointer;
+  touch-action: manipulation;
+}
+.login-senha-alternar:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
 }
 .login-senha-alternar:hover:not(:disabled) {
   background: var(--surface-2);
