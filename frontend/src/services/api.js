@@ -76,6 +76,8 @@ async function request(path, options = {}) {
 export const login = (accessToken) => request('/login', { method: 'POST', body: { access_token: accessToken } })
 export const loginCliente = (credenciais) => request('/login-cliente', { method: 'POST', body: credenciais })
 export const cadastrarCliente = (dados) => request('/cadastro-cliente', { method: 'POST', body: dados })
+export const solicitarRecuperacaoSenha = (email) => request('/recuperar-senha', { method: 'POST', body: { email } })
+export const redefinirSenhaCliente = (dados) => request('/redefinir-senha', { method: 'POST', body: dados })
 export const perfil = () => request('/perfil')
 export const logout = () => request('/logout', { method: 'POST' })
 export const config = () => request('/config')
