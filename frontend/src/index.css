@@ -4376,3 +4376,101 @@ html[data-tema='escuro'] .modal-aviso-exclusao-conteudo {
   background: var(--surface, #242424);
   color: var(--ink, #f4f4f4);
 }
+
+/* Login do cliente: campos alinhados e ações lado a lado. */
+.cliente-login-card {
+  max-width: 620px;
+}
+.login-form-cliente {
+  width: 100%;
+}
+.login-cliente-campos-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
+.login-senha-campo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+}
+.login-senha-campo input {
+  width: 100%;
+  min-width: 0;
+  padding-right: 44px;
+}
+.login-senha-alternar {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.login-senha-alternar:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--brand);
+}
+.login-senha-alternar svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.login-cliente-botoes-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+}
+.login-cliente-botoes-linha > button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+.login-cliente-cadastrar {
+  padding: 12px;
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--brand);
+  font-weight: 700;
+}
+.login-cliente-cadastrar:hover:not(:disabled) {
+  background: var(--brand-soft);
+}
+.login-form-cliente > input {
+  width: 100%;
+}
+@media (max-width: 560px) {
+  .cliente-login-card {
+    max-width: 100%;
+  }
+  .login-cliente-campos-linha,
+  .login-cliente-botoes-linha {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+html[data-tema='escuro'] .login-senha-alternar {
+  color: #b8c9be;
+}
+html[data-tema='escuro'] .login-cliente-cadastrar {
+  color: #a9e4a9;
+  border-color: #76bd84;
+}
