@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { solicitarRecuperacaoSenha, redefinirSenhaCliente } from '../services/api.js';
 import { ICONE_URLS } from '../lib/icones.js';
 import IconeTransparente from './IconeTransparente.jsx';
 
@@ -13,7 +14,10 @@ export default function Login({
   onAcessarAdmin,
 }) {
   const [modo, setModo] = useState('cliente');
-  const [modoCliente, setModoCliente] = useState('entrar');
+  const [modoCliente, setModoCliente] = useState(() => new URLSearchParams(window.location.search).get('token') ? 'redefinir' : 'entrar');
+  const [tokenRecuperacao, setTokenRecuperacao] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
+  const [confirmacaoSenha, setConfirmacaoSenha] = useState('');
+  const [mensagemRecuperacao, setMensagemRecuperacao] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [emailCliente, setEmailCliente] = useState('');
   const [senhaCliente, setSenhaCliente] = useState('');
@@ -42,14 +46,27 @@ export default function Login({
   async function entrarComoCliente(e) {
     e.preventDefault();
     setErro('');
+    setMensagemRecuperacao('');
     setEnviando(true);
     try {
-      if (modoCliente === 'cadastro') {
+      if (modoCliente === 'recuperar') {
+        const resposta = await solicitarRecuperacaoSenha(emailCliente);
+        setMensagemRecuperacao(resposta.mensagem || 'Se houver uma conta com esse e-mail, enviaremos um link de recuperação.');
+      } else if (modoCliente === 'redefinir') {
+        if (senhaCliente !== confirmacaoSenha) throw new Error('As senhas não coincidem.');
+        const resposta = await redefinirSenhaCliente({ token: tokenRecuperacao, senha: senhaCliente });
+        setMensagemRecuperacao(resposta.mensagem || 'Senha redefinida com sucesso. Você já pode entrar.');
+        setModoCliente('entrar');
+        setSenhaCliente('');
+        setConfirmacaoSenha('');
+        setTokenRecuperacao('');
+        window.history.replaceState({}, '', window.location.pathname);
+      } else if (modoCliente === 'cadastro') {
         await onCadastroCliente({ nome: nomeCliente, email: emailCliente, senha: senhaCliente });
       } else {
         await onLoginCliente({ email: emailCliente, senha: senhaCliente });
       }
-      setSenhaCliente('');
+      if (modoCliente !== 'recuperar' && modoCliente !== 'redefinir') setSenhaCliente('');
     } catch (erro) {
       setErro(erro.message);
     } finally {
@@ -59,6 +76,7 @@ export default function Login({
 
   async function abrirAdmin() {
     setErro('');
+    setMensagemRecuperacao('');
     setModo('admin');
     setToken('');
   }
@@ -145,59 +163,130 @@ export default function Login({
         <span className="login-opcao-desc">
           Entre na sua conta para procurar produtos, montar seu carrinho e usar os cupons disponíveis.
         </span>
-        <form className="login-form" onSubmit={entrarComoCliente}>
-          {modoCliente === 'cadastro' && (
-            <input
-              type="text"
-              placeholder="Nome completo"
-              aria-label="Nome completo"
-              value={nomeCliente}
-              onChange={(e) => setNomeCliente(e.target.value)}
-              minLength={2}
-              maxLength={100}
-              autoComplete="name"
-              required
+        {modoCliente === 'recuperar' ? (
+          <>
+            <p className="muted">Informe o e-mail da sua conta. Se ele estiver cadastrado, enviaremos um link para redefinir a senha.</p>
+            <form className="login-form" onSubmit={entrarComoCliente}>
+              <input
+                type="email"
+                placeholder="E-mail cadastrado"
+                aria-label="E-mail cadastrado"
+                value={emailCliente}
+                onChange={(e) => setEmailCliente(e.target.value)}
+                autoComplete="email"
+                maxLength={254}
+                required
+                disabled={enviando}
+              />
+              <button type="submit" className="login-cliente-principal" disabled={enviando}>
+                {enviando ? 'Enviando...' : 'Enviar link de recuperação'}
+              </button>
+            </form>
+            <button type="button" className="link-admin" onClick={() => { setModoCliente('entrar'); setErro(''); setMensagemRecuperacao(''); }} disabled={enviando}>
+              Voltar para entrar
+            </button>
+          </>
+        ) : modoCliente === 'redefinir' ? (
+          <>
+            <p className="muted">Escolha uma nova senha com pelo menos 8 caracteres.</p>
+            <form className="login-form" onSubmit={entrarComoCliente}>
+              <input
+                type="password"
+                placeholder="Nova senha"
+                aria-label="Nova senha"
+                value={senhaCliente}
+                onChange={(e) => setSenhaCliente(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={128}
+                required
+                disabled={enviando}
+              />
+              <input
+                type="password"
+                placeholder="Confirme a nova senha"
+                aria-label="Confirme a nova senha"
+                value={confirmacaoSenha}
+                onChange={(e) => setConfirmacaoSenha(e.target.value)}
+                autoComplete="new-password"
+                minLength={8}
+                maxLength={128}
+                required
+                disabled={enviando}
+              />
+              <button type="submit" className="login-cliente-principal" disabled={enviando}>
+                {enviando ? 'Salvando...' : 'Redefinir senha'}
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <form className="login-form" onSubmit={entrarComoCliente}>
+              {modoCliente === 'cadastro' && (
+                <input
+                  type="text"
+                  placeholder="Nome completo"
+                  aria-label="Nome completo"
+                  value={nomeCliente}
+                  onChange={(e) => setNomeCliente(e.target.value)}
+                  minLength={2}
+                  maxLength={100}
+                  autoComplete="name"
+                  required
+                  disabled={enviando}
+                />
+              )}
+              <input
+                type="email"
+                placeholder="E-mail"
+                aria-label="E-mail"
+                value={emailCliente}
+                onChange={(e) => setEmailCliente(e.target.value)}
+                autoComplete="email"
+                maxLength={254}
+                required
+                disabled={enviando}
+              />
+              <input
+                type="password"
+                placeholder={modoCliente === 'cadastro' ? 'Crie uma senha (mínimo 8 caracteres)' : 'Senha'}
+                aria-label="Senha do cliente"
+                value={senhaCliente}
+                onChange={(e) => setSenhaCliente(e.target.value)}
+                autoComplete={modoCliente === 'cadastro' ? 'new-password' : 'current-password'}
+                minLength={modoCliente === 'cadastro' ? 8 : 1}
+                maxLength={128}
+                required
+                disabled={enviando}
+              />
+              <button type="submit" className="login-cliente-principal" disabled={enviando}>
+                {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : 'Entrar como cliente'}
+              </button>
+            </form>
+            {modoCliente === 'entrar' && (
+              <button type="button" className="link-admin" onClick={() => { setModoCliente('recuperar'); setErro(''); setMensagemRecuperacao(''); }} disabled={enviando}>
+                Esqueci minha senha
+              </button>
+            )}
+            <button
+              type="button"
+              className="link-admin"
+              onClick={() => { setModoCliente(modoCliente === 'cadastro' ? 'entrar' : 'cadastro'); setErro(''); setMensagemRecuperacao(''); }}
               disabled={enviando}
-            />
-          )}
-          <input
-            type="email"
-            placeholder="E-mail"
-            aria-label="E-mail"
-            value={emailCliente}
-            onChange={(e) => setEmailCliente(e.target.value)}
-            autoComplete="email"
-            maxLength={254}
-            required
-            disabled={enviando}
-          />
-          <input
-            type="password"
-            placeholder={modoCliente === 'cadastro' ? 'Crie uma senha (mínimo 8 caracteres)' : 'Senha'}
-            aria-label="Senha do cliente"
-            value={senhaCliente}
-            onChange={(e) => setSenhaCliente(e.target.value)}
-            autoComplete={modoCliente === 'cadastro' ? 'new-password' : 'current-password'}
-            minLength={modoCliente === 'cadastro' ? 8 : 1}
-            maxLength={128}
-            required
-            disabled={enviando}
-          />
-          <button type="submit" className="login-cliente-principal" disabled={enviando}>
-            {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : 'Entrar como cliente'}
-          </button>
-        </form>
-        <button
-          type="button"
-          className="link-admin"
-          onClick={() => { setModoCliente(modoCliente === 'cadastro' ? 'entrar' : 'cadastro'); setErro(''); }}
-          disabled={enviando}
-        >
-          {modoCliente === 'cadastro' ? 'Já tenho uma conta — entrar' : 'Ainda não tenho conta — cadastrar'}
-        </button>
-        <button type="button" className="link-admin" onClick={abrirAdmin} disabled={enviando}>
-          Ou acessar como administrador
-        </button>
+            >
+              {modoCliente === 'cadastro' ? 'Já tenho uma conta — entrar' : 'Ainda não tenho conta — cadastrar'}
+            </button>
+            <button type="button" className="link-admin" onClick={abrirAdmin} disabled={enviando}>
+              Ou acessar como administrador
+            </button>
+          </>
+        )}
+        {mensagemRecuperacao && <p className="sucesso-inline" role="status">{mensagemRecuperacao}</p>}
+      </div>
+      {erro && <p className="erro" role="alert">{erro}</p>}
+    </section>
+  );
+}
       </div>
       {erro && <p className="erro" role="alert">{erro}</p>}
     </section>
