@@ -22,6 +22,7 @@ export default function Login({
   const [nomeCliente, setNomeCliente] = useState('');
   const [emailCliente, setEmailCliente] = useState('');
   const [senhaCliente, setSenhaCliente] = useState('');
+  const [senhaConfirmacao, setSenhaConfirmacao] = useState('');
   const [mostrarSenhaCliente, setMostrarSenhaCliente] = useState(false);
   const [token, setToken] = useState('');
   const [erro, setErro] = useState('');
@@ -53,6 +54,10 @@ export default function Login({
     e.preventDefault();
     setErro('');
     setMensagemReset('');
+    if (modoCliente === 'redefinir' && senhaCliente !== senhaConfirmacao) {
+      setErro('As senhas não coincidem. Digite a mesma senha nos dois campos.');
+      return;
+    }
     setEnviando(true);
     try {
       if (modoCliente === 'cadastro') {
@@ -74,6 +79,7 @@ export default function Login({
         await onLoginCliente({ email: emailCliente, senha: senhaCliente });
       }
       setSenhaCliente('');
+      setSenhaConfirmacao('');
     } catch (erro) {
       setErro(erro.message);
     } finally {
@@ -240,15 +246,52 @@ export default function Login({
                 required
                 disabled={enviando}
               />}
-              {modoCliente !== 'recuperar' && <div className="login-senha-campo">
+              {modoCliente === 'redefinir' ? (
+                <div className="login-cliente-campos-linha login-redefinir-senhas">
+                  <div className="login-senha-campo">
+                    <input
+                      type={mostrarSenhaCliente ? 'text' : 'password'}
+                      placeholder="Nova senha (mínimo 8 caracteres)"
+                      aria-label="Nova senha"
+                      value={senhaCliente}
+                      onChange={(e) => setSenhaCliente(e.target.value)}
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={128}
+                      required
+                      disabled={enviando}
+                    />
+                    <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
+                      {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                    </button>
+                  </div>
+                  <div className="login-senha-campo">
+                    <input
+                      type={mostrarSenhaCliente ? 'text' : 'password'}
+                      placeholder="Confirmar senha"
+                      aria-label="Confirmar nova senha"
+                      value={senhaConfirmacao}
+                      onChange={(e) => setSenhaConfirmacao(e.target.value)}
+                      autoComplete="new-password"
+                      minLength={8}
+                      maxLength={128}
+                      required
+                      disabled={enviando}
+                    />
+                    <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} disabled={enviando}>
+                      {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                    </button>
+                  </div>
+                </div>
+              ) : modoCliente !== 'recuperar' && <div className="login-senha-campo">
                 <input
                   type={mostrarSenhaCliente ? 'text' : 'password'}
-                  placeholder={modoCliente === 'redefinir' ? 'Nova senha (mínimo 8 caracteres)' : 'Senha'}
-                  aria-label={modoCliente === 'redefinir' ? 'Nova senha' : 'Senha do cliente'}
+                  placeholder="Senha"
+                  aria-label="Senha do cliente"
                   value={senhaCliente}
                   onChange={(e) => setSenhaCliente(e.target.value)}
-                  autoComplete={modoCliente === 'redefinir' ? 'new-password' : 'current-password'}
-                  minLength={modoCliente === 'redefinir' ? 8 : 1}
+                  autoComplete="current-password"
+                  minLength={1}
                   maxLength={128}
                   required
                   disabled={enviando}
@@ -266,7 +309,7 @@ export default function Login({
             </div>
           ) : (
             <button type="submit" className="login-cliente-principal" disabled={enviando}>
-              {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : modoCliente === 'recuperar' ? 'Enviar link de redefinição' : 'Salvar nova senha'}
+              {enviando ? 'Aguarde...' : modoCliente === 'cadastro' ? 'Criar conta e entrar' : modoCliente === 'recuperar' ? 'Enviar link de redefinição' : 'Confirmar nova senha'}
             </button>
           )}
         </form>
