@@ -118,10 +118,9 @@ const FRONTEND_URLS = String(process.env.FRONTEND_URL || '')
   .split(',').map((url) => url.trim().replace(/\/$/, '')).filter(Boolean);
 const FRONTEND_URL = FRONTEND_URLS[0] || '';
 
-// Permite previews apenas dos projetos conhecidos do StackBlitz.
-// O sufixo aleatório do ambiente pode mudar; por isso, validamos o nome
-// do projeto, a porta 3000, o domínio HTTPS do WebContainer e o formato do ID.
-// Não libera todas as origens *.webcontainer.io indiscriminadamente.
+// Permite origens HTTPS de previews hospedados nos domínios oficiais do StackBlitz/WebContainers.
+// O identificador e o nome do projeto podem mudar sem exigir nova configuração.
+// Por segurança, NÃO aceita qualquer domínio externo nem origens HTTP.
 function origemStackBlitzPermitida(origem) {
   try {
     const url = new URL(origem);
@@ -129,11 +128,14 @@ function origemStackBlitzPermitida(origem) {
       return false;
     }
     const host = url.hostname.toLowerCase();
-    return /^(?:pantanalpetsoficial|stackblitzstarterspfgtbrt4)-[a-z0-9-]+--3000--[a-f0-9]+\.local-credentialless\.webcontainer\.io$/.test(host);
+    // Aceita subdomínios de domínios oficiais usados pelos previews.
+    // Ex.: *.local-credentialless.webcontainer.io e *.stackblitz.io.
+    return host.endsWith('.webcontainer.io') || host.endsWith('.stackblitz.io');
   } catch {
     return false;
   }
 }
+
 if (emProducao) {
   app.set('trust proxy', 1);
   if (!ACCESS_TOKEN || !SESSION_SECRET) {
