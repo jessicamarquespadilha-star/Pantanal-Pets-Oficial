@@ -24,6 +24,7 @@ export default function Login({
   const [senhaCliente, setSenhaCliente] = useState('');
   const [senhaConfirmacao, setSenhaConfirmacao] = useState('');
   const [mostrarSenhaCliente, setMostrarSenhaCliente] = useState(false);
+  const [mostrarSenhaConfirmacao, setMostrarSenhaConfirmacao] = useState(false);
   const [token, setToken] = useState('');
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -279,7 +280,7 @@ export default function Login({
                   </div>
                   <div className="login-senha-campo">
                     <input
-                      type={mostrarSenhaCliente ? 'text' : 'password'}
+                      type={mostrarSenhaConfirmacao ? 'text' : 'password'}
                       placeholder="Confirmar senha"
                       aria-label="Confirmar nova senha"
                       value={senhaConfirmacao}
@@ -290,8 +291,8 @@ export default function Login({
                       required
                       disabled={enviando}
                     />
-                    <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} disabled={enviando}>
-                      {mostrarSenhaCliente ? (
+                    <button type="button" className="login-senha-alternar" onClick={() => setMostrarSenhaConfirmacao((visivel) => !visivel)} aria-label={mostrarSenhaConfirmacao ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaConfirmacao} title={mostrarSenhaConfirmacao ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
+                      {mostrarSenhaConfirmacao ? (
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                           <path d="M3 3l18 18" />
                           <path d="M10.6 10.6a2 2 0 002.8 2.8" />
