@@ -4394,25 +4394,34 @@ html[data-tema='escuro'] .modal-aviso-exclusao-conteudo {
 .login-senha-campo {
   position: relative;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   width: 100%;
   min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  flex: 0 0 48px;
 }
 .login-senha-campo input {
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding-right: 44px;
+  height: 48px;
+  min-height: 48px;
+  padding-right: 48px;
 }
-.login-senha-alternar {
+.login-senha-campo .login-senha-alternar {
   position: absolute;
   z-index: 2;
   right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 7px;
+  bottom: 7px;
+  transform: none;
   display: grid;
   place-items: center;
   width: 34px;
+  min-width: 34px;
   height: 34px;
+  margin: 0;
   padding: 6px;
   border: 0;
   border-radius: 8px;
@@ -4420,6 +4429,11 @@ html[data-tema='escuro'] .modal-aviso-exclusao-conteudo {
   color: var(--ink-muted);
   cursor: pointer;
   touch-action: manipulation;
+  transition: background 0.15s, color 0.15s;
+}
+.login-senha-campo .login-senha-alternar:hover:not(:disabled),
+.login-senha-campo .login-senha-alternar:active:not(:disabled) {
+  transform: none;
 }
 .login-senha-alternar:focus-visible {
   outline: 2px solid var(--brand);
