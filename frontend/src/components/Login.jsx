@@ -262,7 +262,19 @@ export default function Login({
                       disabled={enviando}
                     />
                     <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
-                      {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                      {mostrarSenhaCliente ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                          <path d="M9.9 5.2A11.2 11.2 0 0112 5c5.2 0 8.8 5.3 9.5 7a12.8 12.8 0 01-3.1 4.1" />
+                          <path d="M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.5 1.2 3.5 7 9.5 7 1.2 0 2.3-.2 3.3-.7" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                   <div className="login-senha-campo">
@@ -279,7 +291,19 @@ export default function Login({
                       disabled={enviando}
                     />
                     <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senhas' : 'Mostrar senhas'} disabled={enviando}>
-                      {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                      {mostrarSenhaCliente ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                          <path d="M9.9 5.2A11.2 11.2 0 0112 5c5.2 0 8.8 5.3 9.5 7a12.8 12.8 0 01-3.1 4.1" />
+                          <path d="M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.5 1.2 3.5 7 9.5 7 1.2 0 2.3-.2 3.3-.7" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -297,7 +321,19 @@ export default function Login({
                   disabled={enviando}
                 />
                 <button type="button" className="login-senha-alternar" onClick={alternarVisibilidadeSenha} aria-label={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} aria-pressed={mostrarSenhaCliente} title={mostrarSenhaCliente ? 'Ocultar senha' : 'Mostrar senha'} disabled={enviando}>
-                  {mostrarSenhaCliente ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18M10.6 10.6a2 2 0 002.8 2.8M9.9 5.2A10.8 10.8 0 0112 5c5.2 0 8.8 5.3 9.5 7-.3.8-1.4 2.6-3.4 4.2M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.4 1 3.4 7 9.5 7 1.2 0 2.3-.2 3.3-.7" /></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" /><circle cx="12" cy="12" r="3" /></svg>}
+                  {mostrarSenhaCliente ? (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M3 3l18 18" />
+                          <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                          <path d="M9.9 5.2A11.2 11.2 0 0112 5c5.2 0 8.8 5.3 9.5 7a12.8 12.8 0 01-3.1 4.1" />
+                          <path d="M6.2 6.2C3.9 7.7 2.7 10.1 2.5 12c.5 1.2 3.5 7 9.5 7 1.2 0 2.3-.2 3.3-.7" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path d="M2.5 12s3.2-7 9.5-7 9.5 7 9.5 7-3.2 7-9.5 7-9.5-7-9.5-7z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
                 </button>
               </div>}
             </>
