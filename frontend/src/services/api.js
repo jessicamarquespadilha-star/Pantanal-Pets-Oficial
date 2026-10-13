@@ -1,6 +1,8 @@
-const API_BASE_URL = String(
-  import.meta.env.VITE_API_URL || 'https://pantanal-pets.onrender.com'
-).replace(/\/$/, '')
+// Em StackBlitz e no deploy full-stack, a interface e a API Express
+// compartilham a mesma origem. A URL relativa evita bloqueios de CORS e
+// garante que as requisições cheguem ao servidor Express iniciado pelo projeto.
+// Se o frontend for hospedado separadamente, VITE_API_URL pode sobrescrever.
+const API_BASE_URL = String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 const ROTAS_SEM_EXPIRACAO = new Set(['/login', '/login-cliente', '/cadastro-cliente', '/perfil'])
 
