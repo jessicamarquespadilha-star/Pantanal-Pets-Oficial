@@ -117,6 +117,23 @@ const LIMITE_IMAGEM_MB = 5;
 const FRONTEND_URLS = String(process.env.FRONTEND_URL || '')
   .split(',').map((url) => url.trim().replace(/\/$/, '')).filter(Boolean);
 const FRONTEND_URL = FRONTEND_URLS[0] || '';
+
+// Permite previews apenas dos projetos conhecidos do StackBlitz.
+// O sufixo aleatório do ambiente pode mudar; por isso, validamos o nome
+// do projeto, a porta 3000, o domínio HTTPS do WebContainer e o formato do ID.
+// Não libera todas as origens *.webcontainer.io indiscriminadamente.
+function origemStackBlitzPermitida(origem) {
+  try {
+    const url = new URL(origem);
+    if (url.protocol !== 'https:' || url.port || url.pathname !== '/' || url.search || url.hash) {
+      return false;
+    }
+    const host = url.hostname.toLowerCase();
+    return /^(?:pantanalpetsoficial|stackblitzstarterspfgtbrt4)-[a-z0-9-]+--3000--[a-f0-9]+\.local-credentialless\.webcontainer\.io$/.test(host);
+  } catch {
+    return false;
+  }
+}
 if (emProducao) {
   app.set('trust proxy', 1);
   if (!ACCESS_TOKEN || !SESSION_SECRET) {
@@ -133,7 +150,13 @@ app.use((req, res, next) => {
   // Nunca refletir automaticamente qualquer Origin: em produção isso exporia
   // endpoints autenticados por cookie a origens não confiáveis.
   const mesmaOrigem = Boolean(origem && `${req.protocol}://${req.get('host')}` === origem);
-  const permitida = Boolean(origem && (mesmaOrigem || FRONTEND_URLS.includes(origem)));
+  const permitida = Boolean(
+    origem && (
+      mesmaOrigem ||
+      FRONTEND_URLS.includes(origem) ||
+      origemStackBlitzPermitida(origem)
+    )
+  );
   if (permitida) {
     res.setHeader('Access-Control-Allow-Origin', origem);
     res.setHeader('Vary', 'Origin');
