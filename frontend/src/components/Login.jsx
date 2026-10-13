@@ -16,7 +16,7 @@ export default function Login({
   onAcessarAdmin,
 }) {
   const [modo, setModo] = useState('cliente');
-  const tokenInicial = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('redefinirSenha') : null;
+  const tokenInicial = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('token') : null;
   const [modoCliente, setModoCliente] = useState(tokenInicial ? 'redefinir' : 'entrar');
   const [mensagemReset, setMensagemReset] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
@@ -61,12 +61,12 @@ export default function Login({
         await onRecuperarSenha(emailCliente);
         setMensagemReset('Se existir uma conta com esse e-mail, enviaremos um link para redefinir a senha.');
       } else if (modoCliente === 'redefinir') {
-        const tokenReset = new URLSearchParams(window.location.search).get('redefinirSenha');
+        const tokenReset = new URLSearchParams(window.location.search).get('token');
         if (!tokenReset) {
           throw new Error('O link de redefinição está incompleto. Solicite um novo e-mail de recuperação.');
         }
         const redefinir = typeof onRedefinirSenha === 'function' ? onRedefinirSenha : redefinirSenhaApi;
-        await redefinir(tokenReset, senhaCliente);
+        await redefinir({ token: tokenReset, senha: senhaCliente });
         setMensagemReset('Senha redefinida com sucesso. Agora entre com a nova senha.');
         setModoCliente('entrar');
         window.history.replaceState({}, '', window.location.pathname);
