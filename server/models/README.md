@@ -1,9 +1,17 @@
-# Models
+# Models e entidades
 
-Os Models normalizam e representam os dados de domínio:
+Os arquivos `produtoModel.js` e `cupomModel.js` representam e normalizam dados do domínio de produtos e cupons. Não existe um arquivo Model separado para cada tabela.
 
-- `produtoModel.js` — modelo e consulta base de produtos;
-- `cupomModel.js` — modelo de cupons;
-- o banco SQLite mantém as entidades `categorias`, `produtos`, `historico` e `cupons`.
+O esquema em `server/database.js` também define:
 
-O acesso físico ao banco é responsabilidade exclusiva da camada DAO.
+- `clientes`: contas de clientes e hash da senha;
+- `recuperacao_senha`: tokens de recuperação com validade e registro de uso;
+- `categorias`: classificação dos produtos;
+- `produtos`: cadastro, descrição, preço, unidade, validade e imagem;
+- `historico`: registro de operações;
+- `cupons`: regras e período de validade dos descontos;
+- `agendamentos_banho_tosa`: solicitações, horários, valores e status;
+- `banho_servicos`: catálogo e preços dos serviços;
+- `banho_veiculos`: opções de transporte e taxas.
+
+A camada DAO (`server/dao/sqliteDAO.js`) encapsula o acesso ao banco SQLite. O arquivo do banco pode ser persistido remotamente por `server/storage.js`.
