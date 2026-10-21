@@ -1,59 +1,49 @@
-# Deploy da Loja Pet
+# Implantação do Pantanal Pets
 
-O projeto foi preparado para deploy como aplicação fullstack em um único serviço Node/Express. O Express serve a API e, em produção, também entrega o build do React.
+O Pantanal Pets é executado no Render e no StackBlitz. A configuração de produção reúne o servidor Node.js, a interface React e as integrações de armazenamento e e-mail.
 
-## Render
+**Aplicação:** https://pantanal-pets.onrender.com
 
-Existe um `render.yaml` na raiz do projeto. Ao importar o repositório no Render, o Blueprint configura:
+## Como o código executa
 
-- `npm ci && npm run build` como build;
-- `npm start` como comando de inicialização;
-- `/api/health` como health check;
-- variáveis de ambiente obrigatórias;
-- disco persistente para `data/produtos.sqlite`.
+O `npm start` inicia `server/index.js`. O Express fornece a API e, em produção, serve o build do front-end React. O `npm run build` usa o Vite. O endpoint `GET /api/health` informa o estado do serviço e o modo de armazenamento.
 
-### Passos
+O repositório inclui um `render.yaml` com comandos, variáveis e disco configurados. O arquivo `render.yaml` descreve a configuração de infraestrutura versionada no repositório.
 
-1. Publique o projeto em um repositório GitHub público ou privado.
-2. No Render, crie um novo Blueprint e selecione o repositório.
-3. Confirme o serviço definido em `render.yaml`.
-4. Aguarde o build e a publicação.
-5. Teste `https://SEU-DOMINIO.onrender.com/api/health`.
-6. Teste a aplicação pela URL principal.
-7. Copie as URLs finais para a seção **URLs de entrega** do README.
+## StackBlitz e Render
 
-### Importante sobre SQLite
+O front-end usa `frontend/src/services/api.js` para acessar a API. O servidor possui regras CORS para os previews do StackBlitz e sessões para os acessos. A compatibilidade com cookies depende também das políticas do navegador.
 
-O projeto usa SQLite. O `render.yaml` inclui um disco persistente montado em `/opt/render/project/src/data` para evitar que `data/produtos.sqlite` seja perdido em reinicializações do serviço. Nunca inclua arquivos `.env` ou chaves privadas no repositório. Como uma chave Supabase já foi exposta na versão recebida, revogue-a e gere outra antes de configurar o ambiente. Para plataformas sem armazenamento persistente, o banco precisa ser migrado para um banco gerenciado.
+## Persistência
 
-## Variáveis de produção
+O código usa SQLite e, quando configuradas as variáveis `SUPABASE_URL` e `SUPABASE_SERVICE_KEY`, utiliza o Supabase Storage para armazenar o arquivo do banco. Sem essas variáveis, usa o arquivo local. Veja `PERSISTENCIA.md`.
 
-- `NODE_ENV=production`
-- `ACCESS_TOKEN`
-- `SESSION_SECRET`
-- `WHATSAPP_NUMERO`
-- `CIDADES_ATENDIDAS`
-- `FRONTEND_URL` — opcional; se front-end e API estiverem em domínios diferentes, informe a origem completa (ou origens separadas por vírgula).
+## Variáveis de ambiente do Render
+
+O ambiente de produção informado utiliza as seguintes variáveis (nomes apenas, sem expor credenciais):
+
+| Variável | Finalidade |
+|---|---|
+| `ACCESS_TOKEN` | Token de acesso do administrador. |
+| `APP_URL` | Endereço público da aplicação, usado também nos links de recuperação de senha. |
+| `EMAIL_FROM` | Remetente dos e-mails enviados pelo Resend. |
+| `FRONTEND_URL` | Origem do frontend StackBlitz autorizada pela configuração. |
+| `NODE_ENV` | Modo de execução (`production` no Render). |
+| `RESEND_API_KEY` | Credencial privada de envio de e-mails pelo Resend. |
+| `SESSION_SECRET` | Segredo de assinatura da sessão. |
+| `SUPABASE_BUCKET` | Bucket do Supabase Storage que contém o banco. |
+| `SUPABASE_OBJECT` | Nome do objeto SQLite armazenado no bucket. |
+| `SUPABASE_SERVICE_KEY` | Credencial privada de acesso ao Supabase Storage. |
+| `SUPABASE_URL` | URL do projeto Supabase. |
+
+Essas variáveis compõem a configuração do ambiente de produção. Os valores de `ACCESS_TOKEN`, `RESEND_API_KEY`, `SESSION_SECRET` e `SUPABASE_SERVICE_KEY` não devem ser publicados.
+
+O número do WhatsApp está definido como constante `WHATSAPP_NUMERO` em `server/index.js`; nesta versão, não é lido de uma variável de ambiente.
+
+## Recuperação de senha por e-mail
+
+O controlador utiliza `RESEND_API_KEY`, `EMAIL_FROM` e `APP_URL` para enviar pelo Resend o link de redefinição de senha do cliente. A mensagem contém um token válido por 30 minutos e de uso único. O envio é acionado pela solicitação de recuperação de senha da aplicação.
 
 ## WebSocket
 
-O canal de tempo real fica em:
-
-`wss://SEU-DOMINIO.onrender.com/ws`
-
-A interface tenta conectar automaticamente quando o usuário está autenticado. Caso o WebSocket não esteja disponível, a aplicação continua funcionando normalmente pela API REST.
-
-## GitHub/GitLab
-
-O repositório remoto não pode ser criado automaticamente a partir deste ZIP sem acesso à conta da equipe. Depois de criar o repositório, execute:
-
-```bash
-git init
-git add .
-git commit -m "Entrega final do projeto web avançado"
-git branch -M main
-git remote add origin URL_DO_REPOSITORIO
-git push -u origin main
-```
-
-Para o bônus de repositório público e colaborativo, cada integrante deve realizar commits reais identificáveis no histórico.
+O servidor disponibiliza comunicação por WebSocket para eventos de atualização. O funcionamento principal também é disponibilizado por rotas HTTP/JSON.
