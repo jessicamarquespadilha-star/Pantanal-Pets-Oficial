@@ -1,18 +1,13 @@
-# CORS flexível para previews do StackBlitz
+# Comunicação entre StackBlitz e Render
 
-O `server/index.js` permite previews HTTPS hospedados em subdomínios dos domínios oficiais `webcontainer.io` e `stackblitz.io`. Assim, o identificador do ambiente e o nome do projeto podem mudar sem precisar atualizar `FRONTEND_URL` a cada vez.
+O Pantanal Pets utiliza o StackBlitz para execução e desenvolvimento e o Render para hospedagem da aplicação. A comunicação entre origens é controlada pelo servidor.
 
-A regra não libera origens HTTP nem domínios externos arbitrários. Para publicar um frontend em outro domínio (por exemplo, um domínio próprio), inclua a origem exata em `FRONTEND_URL` no Render, separando múltiplas origens por vírgula.
+O servidor em `server/index.js` implementa CORS para permitir previews HTTPS dos domínios oficiais do StackBlitz/WebContainer. A variável `FRONTEND_URL` permite indicar origens adicionais explicitamente autorizadas.
 
-## Aplicar no Render
+O front-end centraliza as chamadas HTTP em `frontend/src/services/api.js` e pode usar a API pública publicada no Render quando executado em preview. As rotas de login usam sessão, por isso requisições entre origens também dependem do envio e da aceitação de cookies pelo navegador.
 
-1. Atualize `server/index.js` no repositório conectado ao serviço Render.
-2. Faça commit/push ou publique a alteração pelo fluxo usado no projeto.
-3. Aguarde o deploy terminar.
-4. Teste carregamento, login, sessões e operações administrativas.
+O canal WebSocket é complementar e não substitui a API REST.
 
-## Limitação importante: cookies entre sites
+## Diagnóstico de comunicação
 
-CORS permite que o navegador leia as respostas, mas não garante que cookies de sessão de terceiros sejam aceitos. Alguns navegadores/configurações bloqueiam esses cookies. Se a loja carregar mas a sessão não persistir, será necessário usar um proxy same-origin ou hospedar frontend e API sob o mesmo domínio. Não é possível garantir compatibilidade com qualquer política de cookies apenas com CORS.
-
-A regra CORS não altera o token administrativo, o banco de dados, `ACCESS_TOKEN` ou `SESSION_SECRET`.
+Verifique a URL da API, a origem autorizada, as credenciais de sessão e a resposta de `GET /api/health`. Não troque `ACCESS_TOKEN`, `SESSION_SECRET` nem as configurações de armazenamento para resolver um problema exclusivamente de CORS.
