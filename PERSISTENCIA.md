@@ -1,24 +1,22 @@
-# Persistência dos dados
+# Persistência do Pantanal Pets
 
-O projeto suporta duas estratégias, escolhidas pelas variáveis de ambiente.
+O projeto utiliza **SQLite**, com acesso organizado na camada DAO (`server/dao/sqliteDAO.js`). O esquema e a inicialização do banco ficam em `server/database.js`.
 
-## Render ou servidor com disco persistente
+## Dados armazenados
 
-Por padrão, o SQLite é gravado em `data/produtos.sqlite`. No Render, o `render.yaml` monta um disco persistente nesse diretório. Não apague nem substitua o arquivo de banco durante o deploy.
+Clientes e hashes de senha; solicitações de recuperação de senha; categorias; produtos; histórico; cupons; agendamentos de banho e tosa; serviços; veículos e taxas.
 
-## Supabase Storage (opcional)
+## Modos implementados
 
-No StackBlitz ou em um ambiente sem disco persistente, configure as seguintes variáveis privadas no painel do ambiente de execução:
+O arquivo `server/storage.js` determina o modo de armazenamento:
 
-```env
-SUPABASE_URL=https://SEU-PROJETO.supabase.co
-SUPABASE_SERVICE_KEY=SUA_CHAVE_PRIVADA_ATUAL
-SUPABASE_BUCKET=loja-pet
-SUPABASE_OBJECT=produtos.sqlite
-```
+- **`supabase-storage`**: quando `SUPABASE_URL` e `SUPABASE_SERVICE_KEY` estão configuradas, o servidor lê e salva o arquivo SQLite em um bucket privado do Supabase Storage.
+- **`arquivo-local`**: na ausência dessas variáveis, o banco é mantido como arquivo SQLite local.
 
-O servidor lê segredos apenas de variáveis de ambiente ou de arquivos locais `.env`/`configuracao.env`, ignorados pelo Git. **Não coloque chaves privadas em arquivos `.js`, README, ZIP compartilhado ou repositório.** A chave Supabase incluída em uma versão anterior do projeto deve ser revogada no painel do Supabase antes de qualquer publicação.
+Variáveis opcionais para nome do bucket e objeto: `SUPABASE_BUCKET` e `SUPABASE_OBJECT` (padrões definidos em `server/storage.js`).
 
-Se o Supabase estiver configurado e indisponível na inicialização, o servidor falha de forma explícita para evitar sobrescrever os dados remotos com um banco vazio. Sem as variáveis `SUPABASE_*`, o armazenamento local é utilizado.
+O Supabase Storage **não substitui o SQLite por tabelas PostgreSQL**: ele guarda o arquivo do banco. No StackBlitz, o armazenamento remoto é importante porque arquivos gravados durante a execução podem não persistir entre reinicializações. No Render, a persistência depende do modo efetivamente configurado no serviço.
 
-Confira `GET /api/health`: o campo `armazenamento` informa `supabase-storage` ou `arquivo-local`.
+A rota `GET /api/health` permite verificar o modo indicado pelo servidor. O modo de armazenamento pode ser consultado por essa rota.
+
+**Segurança:** nunca inclua a chave `SUPABASE_SERVICE_KEY` em código do front-end, documentação pública ou repositório.
