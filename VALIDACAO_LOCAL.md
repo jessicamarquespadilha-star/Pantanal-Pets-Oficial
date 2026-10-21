@@ -1,6 +1,8 @@
-# Validação local da Loja Pet
+# Validação local do Pantanal Pets
 
-Execute os comandos na pasta raiz do projeto (a pasta que contém o `package.json` principal):
+A validação automatizada utiliza o Node Test Runner e o build Vite, como parte da verificação técnica do projeto.
+
+Na raiz do projeto:
 
 ```bash
 node --version
@@ -9,21 +11,14 @@ npm ci --no-audit --no-fund
 npm run validate
 ```
 
-O Node deve ser 22.12 ou superior. A versão 22.16.0 está indicada em `.node-version`.
+O `package.json` requer Node.js 22.12 ou superior. `npm run validate` executa `npm test` e `npm run build`.
 
-`npm run validate` executa a suíte de testes e o build de produção. Não considere a validação concluída se qualquer comando retornar código diferente de zero.
+## O que os testes cobrem
 
-## Erro `EAI_AGAIN` / `ENOTFOUND`
+Os arquivos em `tests/` incluem verificações de arquitetura, persistência remota, compatibilidade de banco legado, regras de agendamento, gestão de banho e tosa, CEP, segurança de senhas, utilitários e vendedores.
 
-Esse erro indica que o computador não conseguiu resolver o host do registro npm. Não é uma falha de teste do aplicativo. Verifique internet, VPN/proxy e DNS, rode `npm ping` e tente novamente quando `https://registry.npmjs.org/` estiver acessível.
+O sucesso dos testes automatizados não substitui a conferência visual e funcional da aplicação no StackBlitz e no Render.
 
-## `sql.js` ou Vite ausente
+## Problemas de instalação
 
-Isso geralmente indica que `npm ci` foi interrompido ou executado na pasta errada. No Windows PowerShell:
-
-```powershell
-Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
-npm cache verify
-npm ci --no-audit --no-fund
-npm run validate
-```
+Falhas `EAI_AGAIN` ou `ENOTFOUND` normalmente indicam problema de DNS/rede ao acessar o registro npm. Erros de módulo ausente (`sql.js`, Vite etc.) exigem verificar se `npm ci` foi concluído na raiz correta.
