@@ -93,3 +93,4 @@ export function cidadeAtendida(localidade, cidadesAtendidas = ['Corumbá', 'Lad�
   return Array.isArray(cidadesAtendidas)
     && cidadesAtendidas.map(normalizarCidade).filter(Boolean).includes(cidade);
 }
+// Validação de CEP para Mato Grosso do Sul
