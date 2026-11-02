@@ -15,6 +15,33 @@ O Pantanal Pets é uma aplicação web full-stack para gerenciamento de uma loja
 
 A estrutura separa rotas (`server/routes`), controladores (`server/controllers`), modelos (`server/models`), acesso a dados (`server/dao`) e interface (`frontend/src`). As respostas JSON da API representam a camada de resposta da aplicação.
 
+## Verificação, Validação e Testes de Software (VV&TS)
+
+O projeto conta com uma suíte de testes unitários automatizados e integração contínua (CI) para garantir a qualidade do software.
+
+### Validação de CEP para Mato Grosso do Sul (MS)
+A lógica centralizada no módulo `server/services/cepService.js` implementa regras de negócio específicas para o atendimento em MS:
+* **Normalização e formato:** Tratamento e validação estrita de CEPs de 8 dígitos.
+* **Integração externa:** Consulta à API ViaCEP com tratamento de falhas HTTP e CEPs inexistentes.
+* **Regra de abrangência regional:** Verificação e validação de cidades atendidas no Estado de Mato Grosso do Sul, ignorando caracteres especiais e acentuação.
+
+### Testes Unitários Automáticos
+Os testes são executados com o **Node Test Runner** nativo (`node --test tests/cepService.test.js`) cobrindo 7 cenários essenciais:
+1. Normalização de máscaras e remoção de caracteres não numéricos.
+2. Aceitação estrita de 8 dígitos.
+3. Consulta e tratamento de dados com mock de API externa.
+4. Rejeição imediata de CEPs inválidos antes de requisitar a API.
+5. Tratamento para CEPs inexistentes na base de dados.
+6. Tratamento de falhas HTTP/erros de rede na consulta externa.
+7. Validação de cidades atendidas no estado de MS ignorando acentuação.
+
+### Integração Contínua (CI/CD)
+O projeto utiliza **GitHub Actions** (`.github/workflows/test.yml`) para garantia contínua de qualidade. A esteira automatizada executa em ambiente virtual Linux a cada `push` ou `pull_request` direcionado à branch `main`:
+1. *Checkout* automático do repositório.
+2. Configuração do ambiente Node.js.
+3. Instalação das dependências (`npm install`).
+4. Execução automatizada da suíte de testes (`npm test`).
+
 ## Funcionalidades
 
 ### Acesso e contas
